@@ -1,4 +1,5 @@
 # filter graph object
+import copy
 import graph_tool.all as gt
 import networkx as nx
 
@@ -134,3 +135,59 @@ def gt2nx(g):
         networkx_graph.add_edge(source, target)
 
     return networkx_graph
+
+
+def nx2gt(g):
+    """
+    Convert a NetworkX graph to a GraphTool graph.
+
+    Args:
+        g: The NetworkX graph to be converted.
+
+    Returns:
+        A GraphTool graph equivalent to the input NetworkX graph.
+    """
+    # Check if the NetworkX graph is directed
+    is_directed = g.is_directed()
+
+    # Create an empty GraphTool graph with the same directedness as the NetworkX graph
+    graph_tool_graph = gt.Graph(directed=is_directed)
+
+    # Create a mapping from NetworkX node IDs to GraphTool vertex descriptors
+    nx_to_gt = {}
+
+    # Add nodes from NetworkX to GraphTool
+    for node in g.nodes():
+        v = graph_tool_graph.add_vertex()
+        nx_to_gt[node] = v
+
+    # Add edges from NetworkX to GraphTool
+    for edge in g.edges():
+        source, target = edge
+        v_source = nx_to_gt[source]
+        v_target = nx_to_gt[target]
+        graph_tool_graph.add_edge(v_source, v_target)
+
+    return graph_tool_graph
+
+
+def change_vp_name(graph, old_name, new_name):
+    """
+    Change the name of a vertex property in a GraphTool graph.
+
+    Args:
+        graph: The GraphTool graph object.
+        old_name: The current name of the vertex property.
+        new_name: The new name to assign to the vertex property.
+
+    Returns:
+        The modified GraphTool graph object with the updated vertex property name.
+    """
+    g = copy.deepcopy(graph)
+    if old_name not in g.vp:
+        raise ValueError(f"Vertex property '{old_name}' does not exist in the graph.")
+
+    g.vp[new_name] = g.vp[old_name]
+    del g.vp[old_name]
+
+    return g

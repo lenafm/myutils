@@ -14,26 +14,6 @@ def flatten_list(ls):
     return [item for row in ls for item in row]
 
 
-def get_list_from_csv(file, vartype='str'):
-    elements = []
-    with open(file) as csvfile:
-        csv_reader = csv.reader(csvfile)
-        for row in csv_reader:
-            try:
-                if vartype == 'str':
-                    element = str(row[0])
-                elif vartype == 'int':
-                    element = int(row[0])
-                elif vartype == 'float':
-                    element = float(row[0])
-                else:
-                    raise ValueError('Paramter vartype needs to be one of "str", "int", or "float".')
-                elements.append(element)
-            except ValueError:
-                pass
-    return elements
-
-
 def identify_elements_in_dataframe_column(dataframe, column_name, x):
     """
     Identify elements in a column of a pandas DataFrame that occur in fewer than 'x' rows.
