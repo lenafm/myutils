@@ -1,7 +1,7 @@
 # time and dates
 
 from datetime import datetime
-from myutils.process import get_list_from_csv
+from myutils.files import get_list_from_csv
 
 
 def get_rolling_window(dates, window_size=4):
