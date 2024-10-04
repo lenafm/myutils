@@ -4,29 +4,66 @@ import graph_tool.all as gt
 import numpy as np
 
 
-def get_block_graph(g: gt.Graph, b: gt.VertexPropertyMap) -> gt.Graph:
+def get_block_graph(g: gt.Graph, b: gt.VertexPropertyMap, metadata: gt.VertexPropertyMap = None) -> gt.Graph:
     """
-    Get the block graph induced by a partition.
+    Get the block graph induced by a partition. Optionally, compute the mean of a continuous 'metadata' vertex
+    property for each supernode if the 'metadata' parameter is provided.
 
     Args:
         g (gt.Graph): The input graph.
         b (gt.VertexPropertyMap): The vertex property map representing the partition.
+        metadata (gt.VertexPropertyMap, optional): The continuous vertex property map to compute the average
+            value for each supernode. Defaults to None.
 
     Returns:
-        gt.Graph: The block graph induced by the partition.
+        gt.Graph: The block graph induced by the partition, with the average metadata value for each supernode
+        if the metadata is provided.
+
+    Raises:
+        ValueError: If metadata is provided but is not continuous.
     """
     B = len(set(b))
-    cg, br, vc, ec, av, ae = gt.condensation_graph(g, b,
-                                                   self_loops=True)
+    # Condense the graph using the provided partition
+    cg, br, vc, ec, av, ae = gt.condensation_graph(g, b, self_loops=True)
+
+    # Assign vertex and edge counts
     cg.vp.count = vc
     cg.ep.count = ec
-    rs = np.setdiff1d(np.arange(B, dtype="int"), br.fa,
-                      assume_unique=True)
+
+    # Handle the case of isolated supernodes
+    rs = np.setdiff1d(np.arange(B, dtype="int"), br.fa, assume_unique=True)
     if len(rs) > 0:
         cg.add_vertex(len(rs))
         br.fa[-len(rs):] = rs
 
-    cg = gt.Graph(cg, vorder=br)
+    # Reorder vertices in the block graph based on the block index
+    # Before reordering, copy the br.fa array if it will be needed later
+    br_copy = br.fa.copy()  # Copy to preserve mapping before it is set to None by reordering
+
+    # Calculate the means BEFORE reordering
+    mean_metadata_values = {}
+
+    if metadata is not None:
+        if metadata.value_type() != 'double':
+            raise ValueError("The 'metadata' vertex property must be continuous (type 'double').")
+
+        # Calculate the mean metadata for each block and store it in a dictionary
+        for v in cg.vertices():
+            # Find the original nodes corresponding to the current supernode
+
+            # Compute the mean of the metadata values for the original nodes corresponding to current supernode
+            mean_value = np.mean([metadata[n] for n in g.vertices() if b[n] == int(v)])
+            mean_metadata_values[int(v)] = mean_value
+
+    # Now reorder vertices in the block graph
+    cg = gt.Graph(cg, vorder=br)  # This causes br.fa to become None
+
+    # Assign the computed means to the corresponding vertices in the block graph
+    if metadata is not None:
+        cg.vp.mean_metadata = cg.new_vertex_property('double')
+        for v in cg.vertices():
+            cg.vp.mean_metadata[v] = mean_metadata_values[int(v)]  # Use pre-calculated mean values
+
     return cg
 
 
