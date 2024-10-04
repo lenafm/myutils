@@ -4,6 +4,32 @@ import graph_tool.all as gt
 import numpy as np
 
 
+def get_block_graph(g: gt.Graph, b: gt.VertexPropertyMap) -> gt.Graph:
+    """
+    Get the block graph induced by a partition.
+
+    Args:
+        g (gt.Graph): The input graph.
+        b (gt.VertexPropertyMap): The vertex property map representing the partition.
+
+    Returns:
+        gt.Graph: The block graph induced by the partition.
+    """
+    B = len(set(b))
+    cg, br, vc, ec, av, ae = gt.condensation_graph(g, b,
+                                                   self_loops=True)
+    cg.vp.count = vc
+    cg.ep.count = ec
+    rs = np.setdiff1d(np.arange(B, dtype="int"), br.fa,
+                      assume_unique=True)
+    if len(rs) > 0:
+        cg.add_vertex(len(rs))
+        br.fa[-len(rs):] = rs
+
+    cg = gt.Graph(cg, vorder=br)
+    return cg
+
+
 def generate_network(N, B, mu, mean_degree, equal_block_sizes, micro_ers=False, mesotype='communities',
                      sizes=None, seed=None):
     M = create_block_matrix(mu=mu, N=N, B=B, mean_degree=mean_degree, mesotype=mesotype)
